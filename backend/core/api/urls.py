@@ -29,9 +29,9 @@ from core.api.stock_entry_views import (
 from core.api.finance_views import (
     FinanceDashboardView,
     MonthlyFinanceView,
-    FinanceTopProductsView,
     StockRotationView,
 )
+
 
 
 urlpatterns = [
@@ -63,6 +63,6 @@ urlpatterns = [
     # 📊 ================= BUSINESS INTELLIGENCE =================
     path("bi/finance/", FinanceDashboardView.as_view(), name="bi-finance"),
     path("bi/finance/monthly/", MonthlyFinanceView.as_view(), name="bi-finance-monthly"),
-    path("bi/finance/top-products/", FinanceTopProductsView.as_view(), name="bi-finance-top-products"),
+   # path("bi/finance/top-products/", FinanceTopProductsView.as_view(), name="bi-finance-top-products"),
     path("bi/stock-rotation/", StockRotationView.as_view(), name="bi-stock-rotation"),
 ]
