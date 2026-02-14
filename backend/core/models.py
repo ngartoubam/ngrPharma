@@ -104,11 +104,7 @@ class Product(models.Model):
     form = models.CharField(max_length=50, choices=FORM_CHOICES)
 
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    purchase_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     min_stock_level = models.PositiveIntegerField(default=10)
-
-    manufacturer = models.CharField(max_length=150, blank=True, null=True)
-    requires_prescription = models.BooleanField(default=False)
 
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=timezone.now)
@@ -118,13 +114,15 @@ class Product(models.Model):
 
 
 # =====================================================
-# PRODUCT BATCH (LOT)
+# PRODUCT BATCH (LOT) – AVEC COÛT
 # =====================================================
 class ProductBatch(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="batches")
 
     quantity = models.PositiveIntegerField()
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=2)  # ✅ coût par lot
+
     expiry_date = models.DateField()
     created_at = models.DateTimeField(default=timezone.now)
 
@@ -136,7 +134,7 @@ class ProductBatch(models.Model):
 
 
 # =====================================================
-# SALE
+# SALE (VENTE)
 # =====================================================
 class Sale(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -148,7 +146,30 @@ class Sale(models.Model):
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
 
+    cost_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # ✅ COGS réel
+
     created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Sale {self.id}"
+
+
+# =====================================================
+# FIFO CONSUMPTION TRACKING
+# =====================================================
+class SaleBatchConsumption(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name="batch_consumptions")
+    batch = models.ForeignKey(ProductBatch, on_delete=models.CASCADE)
+
+    quantity = models.PositiveIntegerField()
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    total_cost = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def save(self, *args, **kwargs):
+        self.total_cost = self.quantity * self.unit_cost
+        super().save(*args, **kwargs)
 
 
 # =====================================================
@@ -204,7 +225,7 @@ class Supplier(models.Model):
 
 
 # =====================================================
-# STOCK ENTRY (BON D’ENTRÉE)
+# STOCK ENTRY
 # =====================================================
 class StockEntry(models.Model):
     STATUS_CHOICES = (
@@ -218,14 +239,16 @@ class StockEntry(models.Model):
     supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True, related_name="stock_entries")
 
     invoice_number = models.CharField(max_length=100, blank=True, null=True)
-
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
 
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"StockEntry {self.id} - {self.status}"
 
 
 # =====================================================
@@ -246,68 +269,3 @@ class StockEntryItem(models.Model):
     def save(self, *args, **kwargs):
         self.line_total = self.quantity * self.purchase_price
         super().save(*args, **kwargs)
-
-
-# =====================================================
-# STOCK ENTRY AUDIT
-# =====================================================
-class StockEntryAudit(models.Model):
-    ACTION_CHOICES = (
-        ("CREATED", "Créée"),
-        ("VALIDATED", "Validée"),
-    )
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    pharmacy = models.ForeignKey(Pharmacy, on_delete=models.CASCADE)
-    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
-    stock_entry = models.ForeignKey(StockEntry, on_delete=models.CASCADE)
-
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-    message = models.TextField(blank=True)
-
-    created_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        ordering = ["-created_at"]
-
-# -------------------------
-# STOCK ENTRY AUDIT LOG
-# -------------------------
-class StockEntryAuditLog(models.Model):
-    ACTION_CHOICES = (
-        ("CREATED", "Entrée créée"),
-        ("VALIDATED", "Entrée validée"),
-    )
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    pharmacy = models.ForeignKey(
-        Pharmacy,
-        on_delete=models.CASCADE,
-        related_name="stock_entry_audits"
-    )
-
-    user = models.ForeignKey(
-        CustomUser,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
-
-    stock_entry = models.ForeignKey(
-        StockEntry,
-        on_delete=models.CASCADE,
-        related_name="audit_logs"
-    )
-
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-
-    message = models.TextField(blank=True)
-    created_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"{self.action} | {self.created_at:%Y-%m-%d %H:%M}"

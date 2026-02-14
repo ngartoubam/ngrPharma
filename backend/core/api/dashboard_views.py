@@ -20,15 +20,24 @@ class DashboardAlertsView(APIView):
     @extend_schema(
         summary="Dashboard alertes",
         description="Retourne les alertes clés pour la pharmacie connectée",
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "low_stock_products": {"type": "integer"},
+                    "expired_batches": {"type": "integer"},
+                    "expiring_soon_batches": {"type": "integer"},
+                    "blocked_sales_last_7_days": {"type": "integer"},
+                }
+            }
+        }
     )
     def get(self, request):
         pharmacy = request.user.pharmacy
         today = now().date()
         expiry_limit = today + timedelta(days=30)
 
-        # -----------------------------
         # 🔔 Produits stock bas
-        # -----------------------------
         low_stock_count = (
             Product.objects
             .filter(
@@ -42,27 +51,21 @@ class DashboardAlertsView(APIView):
             .count()
         )
 
-        # -----------------------------
         # ⏰ Lots expirés
-        # -----------------------------
         expired_batches_count = ProductBatch.objects.filter(
             product__pharmacy=pharmacy,
             quantity__gt=0,
             expiry_date__lt=today
         ).count()
 
-        # -----------------------------
         # ⚠️ Lots proches expiration
-        # -----------------------------
         expiring_soon_batches_count = ProductBatch.objects.filter(
             product__pharmacy=pharmacy,
             quantity__gt=0,
             expiry_date__range=(today, expiry_limit)
         ).count()
 
-        # -----------------------------
         # 🚫 Ventes bloquées (7 jours)
-        # -----------------------------
         blocked_sales_count = SaleAuditLog.objects.filter(
             pharmacy=pharmacy,
             created_at__date__gte=today - timedelta(days=7)
