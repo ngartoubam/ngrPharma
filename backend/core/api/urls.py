@@ -1,7 +1,9 @@
+# backend/core/api/urls.py
+
 from django.urls import path
 
 # ================= AUTH =================
-from core.api.auth_views import PinLoginView
+from core.api.auth_views import PinLoginView, EmailLoginView
 
 # ================= SALES =================
 from core.api.sale_views import CreateSaleView, SaleHistoryView
@@ -39,6 +41,7 @@ urlpatterns = [
 
     # 🔐 ================= AUTH =================
     path("auth/pin-login/", PinLoginView.as_view(), name="pin-login"),
+    path("auth/login/", EmailLoginView.as_view(), name="email-login"),
 
     # 🧾 ================= SALES =================
     path("sales/create/", CreateSaleView.as_view(), name="sale-create"),
@@ -64,7 +67,6 @@ urlpatterns = [
     # 📊 ================= BUSINESS INTELLIGENCE =================
     path("bi/finance/", FinanceDashboardView.as_view(), name="bi-finance"),
     path("bi/finance/monthly/", MonthlyFinanceView.as_view(), name="bi-finance-monthly"),
-   # path("bi/finance/top-products/", FinanceTopProductsView.as_view(), name="bi-finance-top-products"),
     path("bi/stock-rotation/", StockRotationView.as_view(), name="bi-stock-rotation"),
     path("bi/intelligence/", IntelligenceView.as_view(), name="bi-intelligence"),
 ]
