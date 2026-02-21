@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import http from "../../api/http.js";
 import {
   LineChart,
@@ -21,20 +22,31 @@ function KpiCard({ title, value, hint }) {
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
+  const [subscription, setSubscription] = useState(null);
 
-  // period optionnel : today / last_7_days / this_month / default(30d)
   const period = "last_7_days";
 
+  // ================================
+  // LOAD BI DATA
+  // ================================
   useEffect(() => {
     (async () => {
       try {
         setErr(null);
-        const res = await http.get(`/bi/finance/?period=${period}`);
-        setData(res.data);
+
+        const [financeRes, subscriptionRes] = await Promise.all([
+          http.get(`/bi/finance/?period=${period}`),
+          http.get(`/billing/me/`), // endpoint à créer si pas encore fait
+        ]);
+
+        setData(financeRes.data);
+        setSubscription(subscriptionRes.data);
       } catch (e) {
-        setErr("Impossible de charger le dashboard BI.");
+        setErr("Impossible de charger le dashboard.");
       }
     })();
   }, []);
@@ -49,15 +61,60 @@ export default function DashboardPage() {
   }, [data]);
 
   if (err) return <div className="text-red-600">{err}</div>;
-  if (!data) return <div>Chargement...</div>;
+  if (!data || !subscription) return <div>Chargement...</div>;
 
   const cur = data.current || {};
   const evo = data.evolution_percent || {};
   const trend = data.trend || {};
   const anomaly = data.anomaly || {};
 
+  const isActive =
+    subscription.subscription_status === "active" ||
+    subscription.subscription_status === "trialing";
+
   return (
     <div className="space-y-6">
+      {/* ================================
+         SUBSCRIPTION HEADER
+      ================================= */}
+      <div className="rounded-2xl bg-white p-4 shadow-sm border flex justify-between items-center">
+        <div>
+          <div className="text-sm text-slate-500">Plan actuel</div>
+          <div className="text-lg font-bold capitalize">
+            {subscription.plan}
+          </div>
+          <div
+            className={`text-sm mt-1 ${isActive ? "text-green-600" : "text-red-600"}`}
+          >
+            Status: {subscription.subscription_status}
+          </div>
+        </div>
+
+        <div>
+          {!isActive ? (
+            <button
+              onClick={() => navigate("/app/subscription")}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+            >
+              Upgrade Plan
+            </button>
+          ) : (
+            <button
+              onClick={async () => {
+                const res = await http.post("/billing/portal/");
+                window.location.href = res.data.url;
+              }}
+              className="bg-slate-700 text-white px-4 py-2 rounded-lg"
+            >
+              Manage Billing
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ================================
+         DASHBOARD HEADER
+      ================================= */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Dashboard BI</h1>
@@ -73,6 +130,9 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* ================================
+         KPI CARDS
+      ================================= */}
       <div className="grid gap-4 md:grid-cols-4">
         <KpiCard
           title="Revenue"
@@ -91,9 +151,12 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* ================================
+         CHART
+      ================================= */}
       <div className="rounded-2xl bg-white p-4 shadow-sm border">
         <div className="mb-3 flex items-center justify-between">
-          <div className="font-semibold">Revenue & Marge (chart-ready)</div>
+          <div className="font-semibold">Revenue & Marge</div>
           <div className="text-xs text-slate-500">Source: /api/bi/finance/</div>
         </div>
 

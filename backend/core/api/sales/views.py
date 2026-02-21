@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import permissions, status
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
-from core.permissions import IsAdminOrGerant
+from core.permissions import IsAdminOrGerant, IsSubscriptionActive
 from core.models import Sale, SaleAuditLog
 
 from .serializers import (
@@ -19,7 +19,10 @@ from .serializers import (
 # CREATE SALE
 # ======================================================
 class CreateSaleView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsSubscriptionActive
+    ]
 
     @extend_schema(
         request=SaleCreateSerializer,
@@ -46,7 +49,11 @@ class CreateSaleView(APIView):
 # SALE HISTORY
 # ======================================================
 class SaleHistoryView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrGerant]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsSubscriptionActive,
+        IsAdminOrGerant
+    ]
 
     @extend_schema(
         responses={200: SaleListSerializer(many=True)},
@@ -71,7 +78,10 @@ class SaleHistoryView(APIView):
 # SALE AUDIT LOG (WITH FILTERS)
 # ======================================================
 class SaleAuditLogView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsSubscriptionActive
+    ]
 
     @extend_schema(
         summary="Journal d’audit des ventes",

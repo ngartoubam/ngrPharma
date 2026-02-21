@@ -22,6 +22,10 @@ urlpatterns = [
     # ================= INTELLIGENCE =================
     path("intelligence/", include("core.api.intelligence.urls")),
 
+    # ================= BILLING (STRIPE SAAS) =================
+    path("billing/", include("core.api.billing.urls")),
+
     # ================= SaaS ADMIN =================
     path("admin/", include("core.api.admin.urls")),
+    
 ]

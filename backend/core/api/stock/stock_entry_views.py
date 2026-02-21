@@ -6,10 +6,9 @@ from rest_framework import permissions, status
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 
-from core.permissions import IsAdminOrGerant
+from core.permissions import IsAdminOrGerant, IsSubscriptionActive
 from core.models import StockEntry
 
-# ✅ IMPORT RELATIF CORRECT
 from .serializers import (
     StockEntryCreateSerializer,
     StockEntryListSerializer,
@@ -24,6 +23,7 @@ from .serializers import (
 class StockEntryCreateView(APIView):
     permission_classes = [
         permissions.IsAuthenticated,
+        IsSubscriptionActive,
         IsAdminOrGerant
     ]
 
@@ -53,6 +53,7 @@ class StockEntryCreateView(APIView):
 class StockEntryListView(APIView):
     permission_classes = [
         permissions.IsAuthenticated,
+        IsSubscriptionActive,
         IsAdminOrGerant
     ]
 
@@ -81,6 +82,7 @@ class StockEntryListView(APIView):
 class StockEntryDetailView(APIView):
     permission_classes = [
         permissions.IsAuthenticated,
+        IsSubscriptionActive,
         IsAdminOrGerant
     ]
 
@@ -107,6 +109,7 @@ class StockEntryDetailView(APIView):
 class StockEntryValidateView(APIView):
     permission_classes = [
         permissions.IsAuthenticated,
+        IsSubscriptionActive,
         IsAdminOrGerant
     ]
 

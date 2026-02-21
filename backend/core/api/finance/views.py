@@ -1,4 +1,6 @@
-from datetime import date, timedelta
+# backend/core/api/finance/views.py
+
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import (
@@ -14,9 +16,8 @@ from rest_framework import permissions
 from drf_spectacular.utils import extend_schema
 
 from core.models import Sale, ProductBatch, Product
-from core.permissions import IsAdminOrGerant
+from core.permissions import IsAdminOrGerant, IsSubscriptionActive
 
-# ✅ IMPORT DES SERIALIZERS DEPUIS serializers.py
 from .serializers import (
     FinanceDashboardResponseSerializer,
     MonthlyFinanceSerializer,
@@ -24,14 +25,17 @@ from .serializers import (
     TopProductSerializer,
 )
 
-
 # =====================================================
-# FINANCIAL DASHBOARD PRO
+# FINANCIAL DASHBOARD PRO (SaaS Protected)
 # =====================================================
 
 class FinanceDashboardView(APIView):
 
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrGerant]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsSubscriptionActive,
+        IsAdminOrGerant
+    ]
 
     @extend_schema(
         summary="Financial dashboard PRO + analytics + anomaly",
@@ -189,7 +193,11 @@ class FinanceDashboardView(APIView):
 
 class FinanceMonthlyView(APIView):
 
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrGerant]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsSubscriptionActive,
+        IsAdminOrGerant
+    ]
 
     @extend_schema(responses=MonthlyFinanceSerializer(many=True))
     def get(self, request):
@@ -234,7 +242,11 @@ class FinanceMonthlyView(APIView):
 
 class FinanceTopProductsView(APIView):
 
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrGerant]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsSubscriptionActive,
+        IsAdminOrGerant
+    ]
 
     @extend_schema(responses=TopProductSerializer(many=True))
     def get(self, request):
@@ -275,7 +287,11 @@ class FinanceTopProductsView(APIView):
 
 class StockRotationView(APIView):
 
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrGerant]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsSubscriptionActive,
+        IsAdminOrGerant
+    ]
 
     @extend_schema(responses=StockRotationSerializer(many=True))
     def get(self, request):

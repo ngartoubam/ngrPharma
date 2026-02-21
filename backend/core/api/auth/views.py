@@ -1,4 +1,4 @@
-# core/api/auth/views.py
+# backend/core/api/auth/views.py
 
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema
 
 from django.contrib.auth import authenticate
-from django.db.models import Q
+from django.utils import timezone
 
 from core.models import Pharmacy, CustomUser
 from .serializers import (
@@ -20,11 +20,16 @@ from .serializers import (
 # 🔐 UTILITAIRE JWT
 # =========================================================
 def generate_tokens_for_user(user, pharmacy=None, is_saas_admin=False):
+
     refresh = RefreshToken.for_user(user)
 
     refresh["role"] = user.role
     refresh["is_saas_admin"] = is_saas_admin
     refresh["pharmacy_id"] = str(pharmacy.id) if pharmacy else None
+
+    if pharmacy:
+        refresh["subscription_status"] = pharmacy.subscription_status
+        refresh["is_active"] = pharmacy.is_active
 
     return {
         "access": str(refresh.access_token),
@@ -33,12 +38,10 @@ def generate_tokens_for_user(user, pharmacy=None, is_saas_admin=False):
 
 
 # =========================================================
-# PIN LOGIN (MODE PHARMACIE / CAISSE)
+# PIN LOGIN (PHARMACIE / CAISSE)
 # =========================================================
 class PinLoginView(GenericAPIView):
-    """
-    Login rapide pour pharmacien / gérant via PIN
-    """
+
     permission_classes = [permissions.AllowAny]
     serializer_class = PinLoginSerializer
 
@@ -47,13 +50,13 @@ class PinLoginView(GenericAPIView):
         summary="PIN Login (Pharmacie / Caisse)",
     )
     def post(self, request):
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         pharmacy_id = serializer.validated_data["pharmacy_id"]
         pin = serializer.validated_data["pin"]
 
-        # 🔎 Vérifier pharmacie
         try:
             pharmacy = Pharmacy.objects.get(id=pharmacy_id)
         except Pharmacy.DoesNotExist:
@@ -62,7 +65,6 @@ class PinLoginView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # 🔎 Récupérer utilisateur actif lié à la pharmacie
         user = CustomUser.objects.filter(
             pharmacy=pharmacy,
             is_active=True
@@ -87,21 +89,24 @@ class PinLoginView(GenericAPIView):
                 "name": user.name,
                 "role": user.role,
                 "is_saas_admin": False,
+                "subscription_status": pharmacy.subscription_status,
+                "subscription_active": pharmacy.has_active_subscription(),
                 "pharmacy": {
                     "id": str(pharmacy.id),
                     "name": pharmacy.name,
+                    "plan": pharmacy.plan,
+                    "subscription_status": pharmacy.subscription_status,
+                    "current_period_end": pharmacy.current_period_end,
                 }
             }
         })
 
 
 # =========================================================
-# SAAS ADMIN LOGIN (EMAIL + PASSWORD)
+# SAAS ADMIN LOGIN
 # =========================================================
 class AdminLoginView(GenericAPIView):
-    """
-    Login réservé au SaaS Admin global
-    """
+
     permission_classes = [permissions.AllowAny]
     serializer_class = AdminLoginSerializer
 
@@ -110,6 +115,7 @@ class AdminLoginView(GenericAPIView):
         summary="SaaS Admin Login (Email / Password)",
     )
     def post(self, request):
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

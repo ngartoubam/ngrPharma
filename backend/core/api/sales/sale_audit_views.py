@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 
 from core.models import SaleAuditLog
+from core.permissions import IsSubscriptionActive
 from .serializers import SaleAuditLogSerializer
 
 
@@ -12,7 +13,7 @@ class SaleAuditLogListView(ListAPIView):
     """
     Journal d’audit des ventes pour la pharmacie connectée
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSubscriptionActive]
     serializer_class = SaleAuditLogSerializer
 
     @extend_schema(

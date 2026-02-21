@@ -1,3 +1,5 @@
+# backend/core/api/intelligence/views.py
+
 from datetime import timedelta
 from django.db.models import Sum, Count
 from django.utils.timezone import now
@@ -8,11 +10,11 @@ from rest_framework import permissions, serializers
 from drf_spectacular.utils import extend_schema
 
 from core.models import Sale, Product, ProductBatch
-from core.permissions import IsAdminOrGerant
+from core.permissions import IsAdminOrGerant, IsSubscriptionActive
 
 
 # =====================================================
-# RESPONSE SERIALIZER (Swagger Fix)
+# RESPONSE SERIALIZER (Swagger Clean)
 # =====================================================
 
 class IntelligenceResponseSerializer(serializers.Serializer):
@@ -25,7 +27,7 @@ class IntelligenceResponseSerializer(serializers.Serializer):
 
 
 # =====================================================
-# INTELLIGENCE VIEW
+# INTELLIGENCE VIEW (SaaS Protected)
 # =====================================================
 
 class IntelligenceView(APIView):
@@ -34,11 +36,16 @@ class IntelligenceView(APIView):
     1) Financial Health Score
     2) Stock Health Index
     3) Underperforming products
-    4) Sales forecast 7 days (mini IA baseline)
+    4) Sales forecast 7 days
     5) Alert intelligence
     """
 
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrGerant]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        IsSubscriptionActive,
+        IsAdminOrGerant,
+    ]
+
     serializer_class = IntelligenceResponseSerializer
 
     @extend_schema(
@@ -59,13 +66,14 @@ class IntelligenceView(APIView):
         prev_end = current_start - timedelta(days=1)
 
         # -------------------------
-        # SALES AGG (CURRENT / PREV)
+        # SALES AGG
         # -------------------------
         current_sales = Sale.objects.filter(
             pharmacy=pharmacy,
             created_at__date__gte=current_start,
             created_at__date__lte=current_end,
         )
+
         prev_sales = Sale.objects.filter(
             pharmacy=pharmacy,
             created_at__date__gte=prev_start,
@@ -77,10 +85,10 @@ class IntelligenceView(APIView):
             cogs=Sum("cost_total"),
             cnt=Count("id"),
         )
+
         prv = prev_sales.aggregate(
             revenue=Sum("total_price"),
             cogs=Sum("cost_total"),
-            cnt=Count("id"),
         )
 
         cur_revenue = cur["revenue"] or 0
@@ -183,7 +191,7 @@ class IntelligenceView(APIView):
         }
 
         # -------------------------
-        # FORECAST (baseline)
+        # FORECAST
         # -------------------------
         last14_start = today - timedelta(days=13)
 
@@ -208,7 +216,10 @@ class IntelligenceView(APIView):
             alerts.append({"type": "expired_stock", "severity": "high"})
 
         return Response({
-            "period": {"current_start": current_start, "current_end": current_end},
+            "period": {
+                "current_start": current_start,
+                "current_end": current_end
+            },
             "financial_health_score": financial_health,
             "stock_health_index": stock_health,
             "underperforming_products": [],

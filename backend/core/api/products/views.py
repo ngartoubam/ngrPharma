@@ -9,11 +9,8 @@ from rest_framework.permissions import IsAuthenticated
 
 from drf_spectacular.utils import extend_schema
 
-from core.models import (
-    Product,
-)
-
-from core.permissions import IsAdminOrGerant
+from core.models import Product
+from core.permissions import IsAdminOrGerant, IsSubscriptionActive
 
 from .serializers import (
     ProductStockSerializer,
@@ -21,11 +18,16 @@ from .serializers import (
     ExpiringBatchSerializer,
 )
 
+
 # ======================================================
 # STOCK GLOBAL PAR PRODUIT
 # ======================================================
 class ProductStockListView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminOrGerant]
+    permission_classes = [
+        IsAuthenticated,
+        IsSubscriptionActive,
+        IsAdminOrGerant
+    ]
 
     @extend_schema(
         summary="Liste du stock global par produit",
@@ -54,7 +56,11 @@ class ProductStockListView(APIView):
 # LOW STOCK PRODUCTS
 # ======================================================
 class LowStockProductListView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrGerant]
+    permission_classes = [
+        IsAuthenticated,
+        IsSubscriptionActive,
+        IsAdminOrGerant
+    ]
 
     @extend_schema(
         summary="Produits en stock bas",
@@ -89,7 +95,11 @@ class LowStockProductListView(APIView):
 # PRODUITS EXPIRÉS OU PROCHES EXPIRATION
 # ======================================================
 class ProductExpiryAlertView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrGerant]
+    permission_classes = [
+        IsAuthenticated,
+        IsSubscriptionActive,
+        IsAdminOrGerant
+    ]
 
     @extend_schema(
         summary="Produits expirés ou proches expiration",

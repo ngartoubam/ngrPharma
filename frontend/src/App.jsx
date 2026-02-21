@@ -10,9 +10,12 @@ import DashboardPage from "./pages/app/DashboardPage";
 import IntelligencePage from "./pages/app/IntelligencePage";
 import ProductsPage from "./pages/app/ProductsPage";
 import SalesPage from "./pages/app/SalesPage";
+import SubscriptionPage from "./pages/app/SubscriptionPage";
 
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
-import PharmaciesPage from "./pages/admin/PharmaciesPage";
+import AdminPharmaciesPage from "./pages/admin/AdminPharmaciesPage";
+import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
+import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
 
 /* =======================================================
    🔐 ADMIN ROUTE PROTECTION
@@ -21,13 +24,8 @@ function AdminRoute({ children }) {
   const token = localStorage.getItem("access_token");
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
-  if (!token) {
-    return <Navigate to="/admin/login" replace />;
-  }
-
-  if (!user?.is_saas_admin) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!token) return <Navigate to="/admin/login" replace />;
+  if (!user?.is_saas_admin) return <Navigate to="/login" replace />;
 
   return children;
 }
@@ -39,14 +37,8 @@ function PharmacyRoute({ children }) {
   const token = localStorage.getItem("access_token");
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Empêche admin SaaS d’entrer dans app pharmacie
-  if (user?.is_saas_admin) {
-    return <Navigate to="/admin/dashboard" replace />;
-  }
+  if (!token) return <Navigate to="/login" replace />;
+  if (user?.is_saas_admin) return <Navigate to="/admin/dashboard" replace />;
 
   return children;
 }
@@ -60,9 +52,7 @@ function SmartRedirect() {
 
   if (!token) return <Navigate to="/login" replace />;
 
-  if (user?.is_saas_admin) {
-    return <Navigate to="/admin/dashboard" replace />;
-  }
+  if (user?.is_saas_admin) return <Navigate to="/admin/dashboard" replace />;
 
   return <Navigate to="/app/dashboard" replace />;
 }
@@ -87,7 +77,9 @@ export default function App() {
         }
       >
         <Route path="dashboard" element={<AdminDashboardPage />} />
-        <Route path="pharmacies" element={<PharmaciesPage />} />
+        <Route path="pharmacies" element={<AdminPharmaciesPage />} />
+        <Route path="subscriptions" element={<AdminSubscriptionsPage />} />
+        <Route path="analytics" element={<AdminAnalyticsPage />} />
       </Route>
 
       {/* ================= PHARMACY APP ================= */}
@@ -103,6 +95,7 @@ export default function App() {
         <Route path="intelligence" element={<IntelligencePage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route path="sales" element={<SalesPage />} />
+        <Route path="subscription" element={<SubscriptionPage />} />
       </Route>
 
       {/* ================= SMART DEFAULT ================= */}
