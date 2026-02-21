@@ -1,14 +1,23 @@
-from datetime import datetime
+# backend/core/api/sales/views.py
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions, status
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from core.permissions import IsAdminOrGerant
 
-from core.api.sale_serializers import SaleCreateSerializer, SaleListSerializer, SaleAuditLogSerializer
+from core.permissions import IsAdminOrGerant
 from core.models import Sale, SaleAuditLog
 
+from .serializers import (
+    SaleCreateSerializer,
+    SaleListSerializer,
+    SaleAuditLogSerializer,
+)
 
+
+# ======================================================
+# CREATE SALE
+# ======================================================
 class CreateSaleView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -19,7 +28,7 @@ class CreateSaleView(APIView):
     def post(self, request):
         serializer = SaleCreateSerializer(
             data=request.data,
-            context={"request": request}  # ✅ OBLIGATOIRE
+            context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
         sale = serializer.save()
@@ -32,13 +41,17 @@ class CreateSaleView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+
+# ======================================================
+# SALE HISTORY
+# ======================================================
 class SaleHistoryView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrGerant,]
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrGerant]
 
     @extend_schema(
         responses={200: SaleListSerializer(many=True)},
-        summary="Historique des ventes par pharmacie",
-        description="Retourne toutes les ventes de la pharmacie de l'utilisateur connecté",
+        summary="Historique des ventes",
+        description="Retourne toutes les ventes de la pharmacie connectée",
     )
     def get(self, request):
         pharmacy = request.user.pharmacy
@@ -52,35 +65,11 @@ class SaleHistoryView(APIView):
 
         serializer = SaleListSerializer(sales, many=True)
         return Response(serializer.data)
-    
-    
-
-class SaleAuditLogListView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    @extend_schema(
-        responses={200: SaleAuditLogSerializer(many=True)},
-        summary="Journal d’audit des ventes",
-        description="Historique des ventes bloquées et réussies pour la pharmacie connectée",
-    )
-    def get(self, request):
-        pharmacy = request.user.pharmacy
-
-        audits = (
-            SaleAuditLog.objects
-            .filter(pharmacy=pharmacy)
-            .select_related("product", "user")
-            .order_by("-created_at")
-        )
-
-        serializer = SaleAuditLogSerializer(audits, many=True)
-        return Response(serializer.data)
 
 
-
-
-
-
+# ======================================================
+# SALE AUDIT LOG (WITH FILTERS)
+# ======================================================
 class SaleAuditLogView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -88,30 +77,10 @@ class SaleAuditLogView(APIView):
         summary="Journal d’audit des ventes",
         description="Historique des ventes bloquées et réussies avec filtres",
         parameters=[
-            OpenApiParameter(
-                name="reason",
-                description="Raison du blocage (expired_stock, insufficient_stock, …)",
-                required=False,
-                type=str,
-            ),
-            OpenApiParameter(
-                name="product_id",
-                description="ID du produit",
-                required=False,
-                type=str,
-            ),
-            OpenApiParameter(
-                name="date_from",
-                description="Date début (YYYY-MM-DD)",
-                required=False,
-                type=str,
-            ),
-            OpenApiParameter(
-                name="date_to",
-                description="Date fin (YYYY-MM-DD)",
-                required=False,
-                type=str,
-            ),
+            OpenApiParameter(name="reason", type=str, required=False),
+            OpenApiParameter(name="product_id", type=str, required=False),
+            OpenApiParameter(name="date_from", type=str, required=False),
+            OpenApiParameter(name="date_to", type=str, required=False),
         ],
         responses={200: SaleAuditLogSerializer(many=True)},
     )
@@ -119,17 +88,14 @@ class SaleAuditLogView(APIView):
         pharmacy = request.user.pharmacy
         qs = SaleAuditLog.objects.filter(pharmacy=pharmacy)
 
-        # 🔹 Filtre par raison
         reason = request.query_params.get("reason")
         if reason:
             qs = qs.filter(reason=reason)
 
-        # 🔹 Filtre par produit
         product_id = request.query_params.get("product_id")
         if product_id:
             qs = qs.filter(product_id=product_id)
 
-        # 🔹 Filtre par date
         date_from = request.query_params.get("date_from")
         if date_from:
             qs = qs.filter(created_at__date__gte=date_from)

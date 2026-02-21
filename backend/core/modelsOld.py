@@ -49,24 +49,56 @@ class Pharmacy(models.Model):
 # =====================================================
 # USER MANAGER
 # =====================================================
+
+# =====================================================
+# USER MANAGER
+# =====================================================
 class UserManager(BaseUserManager):
-    def create_user(self, name, pharmacy, pin, role="vendeur"):
-        if not name:
-            raise ValueError("User must have a name")
-        if not pharmacy:
+
+    def create_user(self, email, name, pharmacy=None, pin=None, role="admin", is_saas_admin=False):
+        if not email:
+            raise ValueError("Users must have an email")
+
+        email = self.normalize_email(email)
+
+        # 🔹 Si pas SaaS admin → pharmacie obligatoire
+        if not is_saas_admin and not pharmacy:
             raise ValueError("User must belong to a pharmacy")
 
         user = self.model(
-            id=uuid.uuid4(),
+            email=email,
             name=name,
             pharmacy=pharmacy,
             role=role,
-            is_active=True,
+            is_saas_admin=is_saas_admin
         )
-        user.set_pin(pin)
+
+        if pin:
+            user.set_pin(pin)
+
         user.save(using=self._db)
         return user
 
+
+    def create_superuser(self, email, name, password):
+        user = self.create_user(
+            email=email,
+            name=name,
+            pharmacy=None,
+            pin=password,
+            is_saas_admin=True
+        )
+
+        user.is_staff = True
+        user.is_superuser = True
+        user.save(using=self._db)
+
+        return user
+
+
+# =====================================================
+# CUSTOM USER
+# =====================================================
 
 # =====================================================
 # CUSTOM USER
@@ -79,10 +111,21 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    pharmacy = models.ForeignKey(Pharmacy, on_delete=models.CASCADE, related_name="users")
+
+    # 🔹 SaaS Admin support
+    email = models.EmailField(unique=True, null=True, blank=True)
+    is_saas_admin = models.BooleanField(default=False)
+
+    pharmacy = models.ForeignKey(
+        Pharmacy,
+        on_delete=models.CASCADE,
+        related_name="users",
+        null=True,
+        blank=True
+    )
 
     name = models.CharField(max_length=150)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="admin")
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -90,7 +133,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     objects = UserManager()
 
-    USERNAME_FIELD = "id"
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["name"]
 
     def set_pin(self, raw_pin):
@@ -102,8 +145,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return check_password(raw_pin, self.password)
 
     def __str__(self):
+        if self.is_saas_admin:
+            return f"{self.name} (SaaS Admin)"
         return f"{self.name} ({self.role})"
-
 
 # =====================================================
 # PRODUCT

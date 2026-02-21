@@ -1,3 +1,5 @@
+# backend/core/api/sales/serializers.py
+
 from rest_framework import serializers
 from django.db import transaction, models
 from django.utils.timezone import now
@@ -26,11 +28,8 @@ class SaleCreateSerializer(serializers.Serializer):
     product_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)
 
-    # ---------------------------------
-    # Audit vente bloquée
-    # ---------------------------------
     def _log_blocked_sale(self, *, request, product, quantity, reason, message):
-        audit_log = SaleAuditLog.objects.create(
+        SaleAuditLog.objects.create(
             pharmacy=request.user.pharmacy,
             user=request.user,
             product=product,
@@ -40,11 +39,6 @@ class SaleCreateSerializer(serializers.Serializer):
             message=message,
         )
 
-        notify_blocked_sale(audit_log)
-
-    # ---------------------------------
-    # VALIDATION
-    # ---------------------------------
     def validate(self, data):
         request = self.context["request"]
         pharmacy = request.user.pharmacy
@@ -105,9 +99,6 @@ class SaleCreateSerializer(serializers.Serializer):
         data["product"] = product
         return data
 
-    # ---------------------------------
-    # CREATE (FIFO réel + COGS)
-    # ---------------------------------
     def create(self, validated_data):
         request = self.context["request"]
         product = validated_data["product"]
@@ -203,7 +194,7 @@ class SaleListSerializer(serializers.ModelSerializer):
 
 
 # =====================================================
-# SALE AUDIT LIST
+# SALE AUDIT LOG SERIALIZER
 # =====================================================
 class SaleAuditLogSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
@@ -213,11 +204,12 @@ class SaleAuditLogSerializer(serializers.ModelSerializer):
         model = SaleAuditLog
         fields = [
             "id",
-            "product_name",
-            "user_name",
             "action",
+            "product",
+            "product_name",
             "requested_quantity",
             "reason",
             "message",
+            "user_name",
             "created_at",
         ]

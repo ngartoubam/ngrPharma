@@ -15,9 +15,10 @@ from core.models import (
 
 from core.permissions import IsAdminOrGerant
 
-from core.api.product_serializers import (
+from .serializers import (
     ProductStockSerializer,
     LowStockProductSerializer,
+    ExpiringBatchSerializer,
 )
 
 # ======================================================

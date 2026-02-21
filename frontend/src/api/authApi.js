@@ -1,10 +1,7 @@
-// frontend/src/api/authApi.js
 import http from "./http";
 
 /**
  * Login pharmacie via PIN
- * @param {string} pharmacyId - UUID de la pharmacie
- * @param {string} pin - PIN utilisateur (pharmacien / gérant)
  */
 export async function login(pharmacyId, pin) {
     const res = await http.post("/auth/pin-login/", {
@@ -16,7 +13,18 @@ export async function login(pharmacyId, pin) {
 }
 
 /**
- * (Option future)
+ * Login SaaS Admin (email + password)
+ */
+export async function adminLogin(email, password) {
+    const res = await http.post("/auth/admin-login/", {
+        email,
+        password,
+    });
+
+    return res.data;
+}
+
+/**
  * Refresh token
  */
 export async function refreshToken(refresh) {

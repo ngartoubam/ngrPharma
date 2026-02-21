@@ -34,6 +34,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
+    'django_extensions',
 
     'core',
 ]
@@ -98,6 +100,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  
 ]
 
 
@@ -179,3 +182,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CUSTOM USER MODEL
 # ======================================================
 AUTH_USER_MODEL = "core.CustomUser"
+
+# ==========================================
+# CORS SETTINGS
+# ==========================================
+CORS_ALLOW_ALL_ORIGINS = True
+
+# (option plus propre en prod)
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:5173",
+# ]

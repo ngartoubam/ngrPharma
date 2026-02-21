@@ -1,3 +1,5 @@
+# backend/core/api/stock/stock_entry_views.py
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions, status
@@ -6,7 +8,9 @@ from drf_spectacular.utils import extend_schema
 
 from core.permissions import IsAdminOrGerant
 from core.models import StockEntry
-from core.api.stock_entry_serializers import (
+
+# ✅ IMPORT RELATIF CORRECT
+from .serializers import (
     StockEntryCreateSerializer,
     StockEntryListSerializer,
     StockEntryDetailSerializer,
@@ -35,7 +39,7 @@ class StockEntryCreateView(APIView):
             context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
-        entry = serializer.save()
+        serializer.save()
 
         return Response(
             {"detail": "Bon d’entrée créé en brouillon"},
